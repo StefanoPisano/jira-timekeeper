@@ -1,4 +1,5 @@
-import {addDays, endOfMonth, format, isSameDay, startOfMonth, startOfWeek} from 'date-fns';
+import {addDays, endOfMonth, endOfWeek, format, isSameDay, startOfMonth, startOfWeek} from 'date-fns';
+import {getActiveAuth} from './authentication/auth';
 import type {DayWorklog} from '../types/jira';
 import {apiFetch} from "@/app/services/api/apiClient";
 
@@ -86,15 +87,23 @@ export const fetchWorklogs = async (startDate: Date, endDate: Date): Promise<Day
 };
 
 export const fetchWeeklyWorklogs = async (currentDate: Date): Promise<DayWorklog[]> => {
-    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const activeAuth = getActiveAuth();
+    const firstDayOfWeek = activeAuth?.firstDayOfWeek ?? 1; // Default to Monday
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: firstDayOfWeek });
     const weekEnd = addDays(weekStart, 6);
     return fetchWorklogs(weekStart, weekEnd);
 };
 
 export const fetchMonthlyWorklogs = async (currentDate: Date): Promise<DayWorklog[]> => {
+    const activeAuth = getActiveAuth();
+    const firstDayOfWeek = activeAuth?.firstDayOfWeek ?? 1;
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
-    // For a better grid, we might want to fetch from the start of the first week of the month 
-    // to the end of the last week. But for now, let's just fetch the current month.
-    return fetchWorklogs(monthStart, monthEnd);
+    
+    // For a better grid, fetch from the start of the first week of the month 
+    // to the end of the last week.
+    const gridStart = startOfWeek(monthStart, { weekStartsOn: firstDayOfWeek });
+    const gridEnd = endOfWeek(monthEnd, { weekStartsOn: firstDayOfWeek });
+    
+    return fetchWorklogs(gridStart, gridEnd);
 };

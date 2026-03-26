@@ -51,11 +51,12 @@ export const MonthlyCalendar: React.FC<CalendarProps> = ({ view, onViewChange })
     const monthLabel = format(currentDate, 'MMMM yyyy');
 
     const activeAuth = getActiveAuth();
-    const showWeekends = activeAuth?.showWeekends ?? false;
+    const workingDays = activeAuth?.workingDays || [1, 2, 3, 4, 5];
+    const firstDayOfWeek = activeAuth?.firstDayOfWeek ?? 1;
     
     // For the grid, we want to show full weeks.
-    const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    const gridStart = startOfWeek(monthStart, { weekStartsOn: firstDayOfWeek });
+    const gridEnd = endOfWeek(monthEnd, { weekStartsOn: firstDayOfWeek });
     
     const days: Date[] = [];
     let curr = gridStart;
@@ -64,7 +65,7 @@ export const MonthlyCalendar: React.FC<CalendarProps> = ({ view, onViewChange })
         curr = addDays(curr, 1);
     }
 
-    const colCount = showWeekends ? 7 : 5;
+    const colCount = workingDays.length;
 
     return (
         <div className="calendar-container monthly-view">
@@ -127,12 +128,9 @@ export const MonthlyCalendar: React.FC<CalendarProps> = ({ view, onViewChange })
                         <p>Loading your tickets...</p>
                     </div>
                 ) : (
-                    <div
-                        className="calendar-grid monthly-grid"
-                        style={{ '--col-count': colCount } as React.CSSProperties}
-                    >
+                    <div className="calendar-grid monthly-grid" style={{ '--col-count': colCount } as React.CSSProperties}>
                         {days
-                            .filter(day => showWeekends || !isWeekend(day))
+                            .filter(day => workingDays.includes(day.getDay()))
                             .map((day: Date) => {
                                 const dayStr = format(day, 'yyyy-MM-dd');
                                 const worklog = worklogs.find(log => log.date === dayStr) || {

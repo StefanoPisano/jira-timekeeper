@@ -3,6 +3,7 @@
   flex-direction: column;
   gap: 2rem;
   height: 80%;
+  overflow-x: hidden;
 }
 
 .calendar-header {
@@ -112,7 +113,7 @@
 
 @media (max-width: 1200px) {
   .calendar-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(var(--col-count, 7), minmax(0, 1fr));
   }
 }
 
@@ -123,7 +124,8 @@
     gap: 1.5rem;
   }
 
-  .header-left, .header-right {
+  .header-left,
+  .header-right {
     width: 100%;
     justify-content: center;
     flex: none;
@@ -170,30 +172,30 @@
   min-height: 120px;
   display: flex;
   flex-direction: column;
-  
+
   .day-header {
     padding-bottom: 0.25rem;
     margin-bottom: 0.25rem;
     border-bottom: 1px solid var(--border-light);
     justify-content: space-between;
-    
+
     .day-info {
       .day-number {
         font-size: 1rem;
         font-weight: 700;
       }
     }
-    
+
     .day-total {
       padding: 0.15rem 0.4rem;
       border-radius: var(--radius-sm);
-      
+
       .total-hours {
         font-size: 0.85rem;
       }
     }
   }
-  
+
   .tickets-container {
     display: flex;
     flex-direction: column;
@@ -206,9 +208,49 @@
     &::-webkit-scrollbar {
       width: 3px;
     }
+
     &::-webkit-scrollbar-thumb {
       background: var(--border-light);
       border-radius: 10px;
+    }
+  }
+}
+
+.days-selection-toggle {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  border-radius: var(--radius-md);
+  width: fit-content;
+  margin-top: 0.5rem;
+
+  button {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    min-width: 36px;
+    box-shadow: var(--shadow-sm);
+
+    &:hover {
+      color: var(--text-primary);
+      border-color: var(--accent-secondary);
+      background: var(--bg-primary);
+      transform: translateY(-1px);
+    }
+
+    &.active {
+      background: var(--accent-primary);
+      color: white;
+      border-color: var(--accent-primary);
+      box-shadow: 0 4px 12px var(--accent-glow);
+      transform: translateY(-1px);
     }
   }
 }
@@ -220,7 +262,7 @@
   padding: 0.25rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-light);
-  
+
   button {
     padding: 0.35rem 0.75rem;
     font-size: 0.75rem;
@@ -231,12 +273,12 @@
     color: var(--text-secondary);
     cursor: pointer;
     transition: all var(--transition-fast);
-    
+
     &:hover {
       color: var(--text-primary);
       background: rgba(255, 255, 255, 0.05);
     }
-    
+
     &.active {
       background: var(--accent-primary);
       color: white;

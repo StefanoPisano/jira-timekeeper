@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { addWeeks, endOfWeek, format, startOfWeek, subWeeks } from 'date-fns';
+import { addDays, addWeeks, endOfWeek, format, startOfWeek, subWeeks } from 'date-fns';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2, RefreshCcw } from 'lucide-react';
 import type { DayWorklog } from '../../types/jira.ts';
 import { fetchWeeklyWorklogs } from '../../services/worklogs';
@@ -46,13 +46,14 @@ export const WeeklyCalendar: React.FC<CalendarProps> = ({ view, onViewChange }) 
     const handleToday = () => setCurrentDate(new Date());
     const handleRefresh = () => setForceRefresh(Math.random());
 
-    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-    const weekRange = `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
-
     const activeAuth = getActiveAuth();
-    const showWeekends = activeAuth?.showWeekends ?? false;
-    const colCount = showWeekends ? 7 : 5;
+    const workingDays = activeAuth?.workingDays || [1, 2, 3, 4, 5];
+    const firstDayOfWeek = activeAuth?.firstDayOfWeek ?? 1;
+    const colCount = workingDays.length;
+
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: firstDayOfWeek });
+    const weekEnd = endOfWeek(currentDate, { weekStartsOn: firstDayOfWeek });
+    const weekRange = `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
 
     return (
         <div className="calendar-container">
@@ -120,7 +121,7 @@ export const WeeklyCalendar: React.FC<CalendarProps> = ({ view, onViewChange }) 
                         style={{ '--col-count': colCount } as React.CSSProperties}
                     >
                         {worklogs
-                            .filter(log => showWeekends || !isWeekend(new Date(log.date)))
+                            .filter(log => workingDays.includes(new Date(log.date).getDay()))
                             .map((log: DayWorklog) => (
                                 <DayCard key={log.date} worklog={log} />
                             ))}

@@ -18,5 +18,6 @@ export interface JiraAuth {
     email: string;
     token: string;
     workingHours?: number;
-    showWeekends?: boolean;
+    workingDays?: number[]; // [0, 1, 2, 3, 4, 5, 6] where 0 is Sunday
+    firstDayOfWeek?: 0 | 1; // 0: Sunday, 1: Monday
 }

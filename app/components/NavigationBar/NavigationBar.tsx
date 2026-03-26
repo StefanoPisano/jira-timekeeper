@@ -84,7 +84,7 @@ export const NavigationBar: React.FC<AuthNavProps> = ({ onAuthChange }) => {
             email: '',
             token: '',
             workingHours: 8,
-            showWeekends: false
+            workingDays: [1, 2, 3, 4, 5]
         });
         setIsEditing(true);
     };
@@ -135,7 +135,8 @@ export const NavigationBar: React.FC<AuthNavProps> = ({ onAuthChange }) => {
             email: (currentAuth.email || '').trim(),
             token: (currentAuth.token || '').trim(),
             workingHours: currentAuth.workingHours || 8,
-            showWeekends: !!currentAuth.showWeekends
+            workingDays: currentAuth.workingDays || [1, 2, 3, 4, 5],
+            firstDayOfWeek: currentAuth.firstDayOfWeek ?? 1
         };
 
         addAuth(trimmedAuth);
@@ -295,7 +296,8 @@ export const NavigationBar: React.FC<AuthNavProps> = ({ onAuthChange }) => {
                     email: (content.email || '').trim(),
                     token: (content.token || '').trim(),
                     workingHours: content.workingHours || 8,
-                    showWeekends: !!content.showWeekends
+                    workingDays: content.workingDays || (content.showWeekends ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5]),
+                    firstDayOfWeek: content.firstDayOfWeek ?? 1
                 };
 
                 addAuth(auth);
@@ -436,14 +438,48 @@ export const NavigationBar: React.FC<AuthNavProps> = ({ onAuthChange }) => {
                                 <p className="help-text">Expected hours per day for status indicators.</p>
                             </div>
 
-                            <div className="form-group-checkbox">
-                                <label htmlFor="showWeekends">Show Weekends</label>
-                                <input
-                                    type="checkbox"
-                                    id="showWeekends"
-                                    checked={!!currentAuth.showWeekends}
-                                    onChange={(e) => setCurrentAuth({ ...currentAuth, showWeekends: e.target.checked })}
-                                />
+                            <div className="form-group">
+                                <label className="block text-sm font-medium text-text-secondary mb-2">Working Days</label>
+                                <div className="days-selection-toggle">
+                                    {(() => {
+                                        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                                        const startDay = currentAuth.firstDayOfWeek ?? 1;
+                                        return Array.from({ length: 7 }).map((_, i) => {
+                                            const dayIndex = (i + startDay) % 7;
+                                            const dayName = dayNames[dayIndex];
+                                            const isSelected = (currentAuth.workingDays || [1, 2, 3, 4, 5]).includes(dayIndex);
+                                            return (
+                                                <button
+                                                    key={dayName}
+                                                    type="button"
+                                                    className={isSelected ? 'active' : ''}
+                                                    onClick={() => {
+                                                        const days = currentAuth.workingDays || [1, 2, 3, 4, 5];
+                                                        const nextDays = days.includes(dayIndex)
+                                                            ? days.filter(d => d !== dayIndex)
+                                                            : [...days, dayIndex].sort();
+                                                        setCurrentAuth({ ...currentAuth, workingDays: nextDays });
+                                                    }}
+                                                >
+                                                    {dayName}
+                                                </button>
+                                            );
+                                        });
+                                    })()}
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="firstDayOfWeek" className="block text-sm font-medium text-text-secondary mb-1">First Day of Week</label>
+                                <select
+                                    id="firstDayOfWeek"
+                                    value={currentAuth.firstDayOfWeek ?? 1}
+                                    onChange={(e) => setCurrentAuth({ ...currentAuth, firstDayOfWeek: parseInt(e.target.value) as 0 | 1 })}
+                                    className="w-full bg-bg-primary border border-border-light rounded-md p-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                                >
+                                    <option value={1}>Monday</option>
+                                    <option value={0}>Sunday</option>
+                                </select>
                             </div>
 
                             <div className="settings-actions">

@@ -11,14 +11,20 @@ export const getActiveAuth = (): JiraAuth | null => {
     try {
         const auths: JiraAuth[] = JSON.parse(authsJson);
         const activeId = getStorageValue('ACTIVE_JIRA_AUTH_ID');
-        const active = auths.find(a => a.id === activeId) || auths[0] || null;
+        const active: any = auths.find(a => a.id === activeId) || auths[0] || null;
         if (active && active.workingHours === undefined) {
             active.workingHours = 8;
         }
-        if (active && active.showWeekends === undefined) {
-            active.showWeekends = false;
+        if (active && active.workingDays === undefined) {
+            // Migrate from showWeekends or default to Mon-Fri
+            if (active.showWeekends) {
+                active.workingDays = [0, 1, 2, 3, 4, 5, 6];
+            } else {
+                active.workingDays = [1, 2, 3, 4, 5];
+            }
+            delete active.showWeekends;
         }
-        return active;
+        return active as JiraAuth;
     } catch (e) {
         return null;
     }
