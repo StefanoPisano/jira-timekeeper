@@ -1,19 +1,19 @@
-import {addDays, format, isSameDay, startOfWeek} from 'date-fns';
+import {addDays, endOfMonth, format, isSameDay, startOfMonth, startOfWeek} from 'date-fns';
 import type {DayWorklog} from '../types/jira';
 import {apiFetch} from "@/app/services/api/apiClient";
 
 const formatDate = (date: Date) => format(date, 'yyyy-MM-dd');
 
-export const fetchWeeklyWorklogs = async (currentDate: Date): Promise<DayWorklog[]> => {
-    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-    const weekEnd = addDays(weekStart, 6);
-    const startStr = format(weekStart, 'yyyy-MM-dd');
-    const endStr = format(weekEnd, 'yyyy-MM-dd');
+export const fetchWorklogs = async (startDate: Date, endDate: Date): Promise<DayWorklog[]> => {
+    const startStr = format(startDate, 'yyyy-MM-dd');
+    const endStr = format(endDate, 'yyyy-MM-dd');
 
-    const weekData: DayWorklog[] = [];
-    for (let i = 0; i < 7; i++) {
-        const day = addDays(weekStart, i);
-        weekData.push({
+    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const worklogData: DayWorklog[] = [];
+    
+    for (let i = 0; i < totalDays; i++) {
+        const day = addDays(startDate, i);
+        worklogData.push({
             date: formatDate(day),
             tickets: [],
             totalHours: 0
@@ -23,7 +23,7 @@ export const fetchWeeklyWorklogs = async (currentDate: Date): Promise<DayWorklog
     try {
         const jql = `worklogAuthor = currentUser() AND worklogDate >= "${startStr}" AND worklogDate <= "${endStr}"`;
 
-        const searchRes =await apiFetch(
+        const searchRes = await apiFetch(
             `/api/jira/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&fields=summary,project`);
 
         if (!searchRes.ok) throw new Error(`Jira Search failed: ${searchRes.statusText}`);
@@ -31,6 +31,7 @@ export const fetchWeeklyWorklogs = async (currentDate: Date): Promise<DayWorklog
         const issues = searchData.issues || [];
 
         const meRes = await apiFetch('/api/jira/rest/api/3/myself');
+        if (!meRes.ok) throw new Error(`Jira Myself failed: ${meRes.statusText}`);
         const meData = await meRes.json();
         const currentUserAccountId = meData.accountId;
 
@@ -39,8 +40,8 @@ export const fetchWeeklyWorklogs = async (currentDate: Date): Promise<DayWorklog
 
             if (!worklogRes.ok) continue;
 
-            const worklogData = await worklogRes.json();
-            const worklogs = worklogData.worklogs || [];
+            const worklogDataRaw = await worklogRes.json();
+            const worklogs = worklogDataRaw.worklogs || [];
 
             const userWorklogs = worklogs.filter(
                 (l: any) => l.author?.accountId === currentUserAccountId
@@ -48,14 +49,12 @@ export const fetchWeeklyWorklogs = async (currentDate: Date): Promise<DayWorklog
             for (const log of userWorklogs) {
                 const logDate = new Date(log.started);
 
-                if (logDate >= weekStart && logDate < addDays(weekEnd, 1)) {
-
-                    const dayBox = weekData.find(d => isSameDay(new Date(d.date), logDate));
+                if (logDate >= startDate && logDate < addDays(endDate, 1)) {
+                    const dayBox = worklogData.find(d => isSameDay(new Date(d.date), logDate));
 
                     if (!dayBox) continue;
 
                     const hours = (log.timeSpentSeconds || 0) / 3600;
-
                     const existingTicket = dayBox.tickets.find(t => t.id === issue.key);
 
                     if (existingTicket) {
@@ -74,7 +73,7 @@ export const fetchWeeklyWorklogs = async (currentDate: Date): Promise<DayWorklog
             }
         }
 
-        weekData.forEach(day => {
+        worklogData.forEach(day => {
             day.totalHours = parseFloat(day.totalHours.toFixed(2));
             day.tickets.forEach(t => t.loggedHours = parseFloat(t.loggedHours.toFixed(2)));
         });
@@ -83,5 +82,19 @@ export const fetchWeeklyWorklogs = async (currentDate: Date): Promise<DayWorklog
         throw error;
     }
 
-    return weekData;
+    return worklogData;
+};
+
+export const fetchWeeklyWorklogs = async (currentDate: Date): Promise<DayWorklog[]> => {
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const weekEnd = addDays(weekStart, 6);
+    return fetchWorklogs(weekStart, weekEnd);
+};
+
+export const fetchMonthlyWorklogs = async (currentDate: Date): Promise<DayWorklog[]> => {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    // For a better grid, we might want to fetch from the start of the first week of the month 
+    // to the end of the last week. But for now, let's just fetch the current month.
+    return fetchWorklogs(monthStart, monthEnd);
 };

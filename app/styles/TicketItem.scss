@@ -48,7 +48,7 @@
 }
 
 .ticket-id a{
-  font-size: 0.6rem;
+  font-size: 0.8rem;
   font-weight: 600;
   background: rgba(92, 107, 192, 0.15);
   color: var(--accent-secondary);
@@ -61,7 +61,7 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -80,4 +80,32 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.ticket-item.is-compact {
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius-sm);
+  
+  &:before {
+    width: 2px;
+  }
+  
+  .ticket-header {
+    margin-bottom: 0;
+    gap: 0.5rem;
+  }
+  
+  .ticket-id a {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.25rem;
+  }
+  
+  .ticket-hours {
+    font-size: 0.7rem;
+    
+    .clock-icon {
+      width: 10px;
+      height: 10px;
+    }
+  }
 }

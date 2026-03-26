@@ -2,12 +2,14 @@
 
 import {useState} from 'react';
 import {WeeklyCalendar} from './components/Calendar/WeeklyCalendar';
+import {MonthlyCalendar} from './components/Calendar/MonthlyCalendar';
 import {NavigationBar} from './components/NavigationBar/NavigationBar';
 import Footer from "@/app/components/Footer/Footer";
 import logo from './assets/logo_white.png';
 
 export default function Page() {
     const [refreshKey, setRefreshKey] = useState(0);
+    const [view, setView] = useState<'weekly' | 'monthly'>('weekly');
 
     const handleAuthChange = () => {
         setRefreshKey(prev => prev + 1);
@@ -25,7 +27,19 @@ export default function Page() {
 
             <div className="main-content flex flex-col justify-between">
                 <main className={"flex-1"}>
-                    <WeeklyCalendar key={refreshKey} />
+                    {view === 'weekly' ? (
+                        <WeeklyCalendar 
+                            key={`weekly-${refreshKey}`} 
+                            view={view} 
+                            onViewChange={setView} 
+                        />
+                    ) : (
+                        <MonthlyCalendar 
+                            key={`monthly-${refreshKey}`} 
+                            view={view} 
+                            onViewChange={setView} 
+                        />
+                    )}
                 </main>
                 <Footer></Footer>
             </div>

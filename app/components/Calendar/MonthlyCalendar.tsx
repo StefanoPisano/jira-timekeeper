@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { addWeeks, endOfWeek, format, startOfWeek, subWeeks } from 'date-fns';
+import { addMonths, format, startOfMonth, endOfMonth, subMonths, isSameDay, startOfWeek, endOfWeek, addDays, isSameMonth } from 'date-fns';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2, RefreshCcw } from 'lucide-react';
 import type { DayWorklog } from '../../types/jira.ts';
-import { fetchWeeklyWorklogs } from '../../services/worklogs';
+import { fetchMonthlyWorklogs } from '../../services/worklogs';
 import { getActiveAuth } from '../../services/authentication/auth';
 import { DayCard } from '../DayCard/DayCard';
 import { isWeekend } from 'date-fns';
@@ -13,24 +13,24 @@ interface CalendarProps {
     onViewChange: (view: 'weekly' | 'monthly') => void;
 }
 
-export const WeeklyCalendar: React.FC<CalendarProps> = ({ view, onViewChange }) => {
+export const MonthlyCalendar: React.FC<CalendarProps> = ({ view, onViewChange }) => {
     const [forceRefresh, setForceRefresh] = useState<number | null>(null);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [worklogs, setWorklogs] = useState<DayWorklog[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [weeklyTotal, setWeeklyTotal] = useState(0);
+    const [monthlyTotal, setMonthlyTotal] = useState(0);
 
     useEffect(() => {
         const loadData = async () => {
             setLoading(true);
             setError(null);
             try {
-                const data = await fetchWeeklyWorklogs(currentDate);
+                const data = await fetchMonthlyWorklogs(currentDate);
                 setWorklogs(data);
 
                 const total = data.reduce((sum, day) => sum + day.totalHours, 0);
-                setWeeklyTotal(parseFloat(total.toFixed(1)));
+                setMonthlyTotal(parseFloat(total.toFixed(1)));
             } catch (err: any) {
                 setError(err.message || "An error occurred while fetching Jira data.");
             } finally {
@@ -41,21 +41,33 @@ export const WeeklyCalendar: React.FC<CalendarProps> = ({ view, onViewChange }) 
         loadData();
     }, [currentDate, forceRefresh]);
 
-    const handlePrevWeek = () => setCurrentDate(subWeeks(currentDate, 1));
-    const handleNextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
+    const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
+    const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
     const handleToday = () => setCurrentDate(new Date());
     const handleRefresh = () => setForceRefresh(Math.random());
 
-    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-    const weekRange = `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    const monthLabel = format(currentDate, 'MMMM yyyy');
 
     const activeAuth = getActiveAuth();
     const showWeekends = activeAuth?.showWeekends ?? false;
+    
+    // For the grid, we want to show full weeks.
+    const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+    const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    
+    const days: Date[] = [];
+    let curr = gridStart;
+    while (curr <= gridEnd) {
+        days.push(curr);
+        curr = addDays(curr, 1);
+    }
+
     const colCount = showWeekends ? 7 : 5;
 
     return (
-        <div className="calendar-container">
+        <div className="calendar-container monthly-view">
             <header className="calendar-header">
                 <div className="header-left">
                     <CalendarIcon className="header-icon" />
@@ -81,11 +93,11 @@ export const WeeklyCalendar: React.FC<CalendarProps> = ({ view, onViewChange }) 
                     </button>
 
                     <div className="week-navigation">
-                        <button className="btn btn-icon" onClick={handlePrevWeek} aria-label="Previous Week">
+                        <button className="btn btn-icon" onClick={handlePrevMonth} aria-label="Previous Month">
                             <ChevronLeft size={20} />
                         </button>
-                        <span className="week-range">{weekRange}</span>
-                        <button className="btn btn-icon" onClick={handleNextWeek} aria-label="Next Week">
+                        <span className="week-range">{monthLabel}</span>
+                        <button className="btn btn-icon" onClick={handleNextMonth} aria-label="Next Month">
                             <ChevronRight size={20} />
                         </button>
                     </div>
@@ -97,8 +109,8 @@ export const WeeklyCalendar: React.FC<CalendarProps> = ({ view, onViewChange }) 
 
                 <div className="header-right">
                     <div className="weekly-summary">
-                        <span className="summary-label">Week Total:</span>
-                        <span className="summary-value">{weeklyTotal}h</span>
+                        <span className="summary-label">Month Total:</span>
+                        <span className="summary-value">{monthlyTotal}h</span>
                     </div>
                 </div>
             </header>
@@ -116,14 +128,26 @@ export const WeeklyCalendar: React.FC<CalendarProps> = ({ view, onViewChange }) 
                     </div>
                 ) : (
                     <div
-                        className="calendar-grid"
+                        className="calendar-grid monthly-grid"
                         style={{ '--col-count': colCount } as React.CSSProperties}
                     >
-                        {worklogs
-                            .filter(log => showWeekends || !isWeekend(new Date(log.date)))
-                            .map((log: DayWorklog) => (
-                                <DayCard key={log.date} worklog={log} />
-                            ))}
+                        {days
+                            .filter(day => showWeekends || !isWeekend(day))
+                            .map((day: Date) => {
+                                const dayStr = format(day, 'yyyy-MM-dd');
+                                const worklog = worklogs.find(log => log.date === dayStr) || {
+                                    date: dayStr,
+                                    tickets: [],
+                                    totalHours: 0
+                                };
+                                const isCurrentMonth = isSameMonth(day, currentDate);
+                                
+                                return (
+                                    <div key={dayStr} className={`grid-day-cell ${!isCurrentMonth ? 'other-month' : ''}`}>
+                                        <DayCard worklog={worklog} isCompact={true} />
+                                    </div>
+                                );
+                            })}
                     </div>
                 )}
             </div>
